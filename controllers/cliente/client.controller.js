@@ -1,52 +1,42 @@
 const db = require('../../config/db');
 
-// Crear clientes
-const registerClient = async (req, res) => {
-    const { nombre, correo, password } = req.body;
-
-    if (!nombre || !correo || !password) {
-        return res.status(400).json({ message: 'Faltan datos obligatorios.' });
-    }
-
+//Consultar clientes
+const getCliente = async (req, res) => {
     try {
-        const [existing] = await pool.query('SELECT * FROM clients WHERE correo = ?', [correo]);
-
-        if (existing.length > 0) {
-            return res.status(409).json({ message: 'El correo ya está registrado.' });
-        }
-
-        await pool.query('INSERT INTO clients (nombre, correo, password) VALUES (?, ?, ?)', [nombre, correo, password]);
-
-        res.status(201).json({ message: 'Cliente registrado con éxito.' });
+        const [rows] = await db.query('SELECT id, nombre, correo, telefono FROM clientes');
+        res.status(200).json(rows);
     } catch (error) {
-        console.error('Error al registrar cliente:', error);
-        res.status(500).json({ message: 'Error del servidor.' });
+        console.error('Error al obtener clientes:', error);
+        res.status(500).json({ message: 'Error del servidor al obtener clientes.' });
     }
 };
 
-// Eliminar clientes
-exports.deleteClient = async (req, res) => {
-    const {id} = req.params;
-
+//Consultar suscripciones
+const getSuscripciones = async (req, res) => {
     try {
-        const [result] = await db.execute(
-            'DELETE FROM clients WHERE id = ?', [id]
-        );
+        const [rows] = await db.query(`
+            SELECT 
+                s.cliente_id,
+                c.nombre AS nombre_cliente,
+                s.tipo,
+                s.fecha_inicio,
+                s.fecha_vencimiento,
+                s.estado
+            FROM 
+                suscripciones s
+            JOIN 
+                clientes c ON s.cliente_id = c.id
+        `);
 
-        if(result.affectedRows = 0){
-            return res(404).json({error: 'Cliente no encontrado'});
-        }
-
-        res(201).json({message: 'Cliente eliminado correctamente'});
- 
+        res.status(200).json(rows);
     } catch (error) {
-        console.error('Error al eliminar al cliente', err);
-        res.status(500).json({error: 'Error interno del servidor'});
+        console.error('Error al obtener suscripciones:', error);
+        res.status(500).json({ message: 'Error al obtener las suscripciones.' });
     }
-
-}
+};
 
 // Editar clientes
-exports.editClient = async (req, res) => {
-    
+module.exports = {
+    getCliente,
+    getSuscripciones
 }
