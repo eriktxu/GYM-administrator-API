@@ -132,8 +132,14 @@ const datosCliente = async (req, res) => {
             imc,
             id
         ];
+        
+        // console.log("Datos recibidos:", req.body); // Para verificar lo que llega
+        // console.log("Query:", query);
+        // console.log("Values:", values);
 
-        const [result] = await pool.query(query, values);
+        const [result] = await db.query(query, values);
+
+        // console.log("Resultado de la actualización:", result);
 
         if (result.affectedRows === 0) {
             return res.status(404).json({ message: 'Cliente no encontrado' });
