@@ -1,4 +1,6 @@
 const db = require('../../config/db');
+const express = require("express");
+const router = express.Router();
 
 //Consultar clientes
 const getCliente = async (req, res) => {
@@ -82,8 +84,72 @@ const registrarCliente = async (req, res) => {
     }
 };
 
+//Enviar datos de cliente
+const datosCliente = async (req, res) => {
+    const {
+        id,
+        edad,
+        genero,
+        altura,
+        peso,
+        cintura,
+        tipo_cuerpo,
+        nivel_actividad,
+        objetivo,
+        restricciones_comida,
+        enfermedades,
+        imc
+    } = req.body;
+
+    try {
+        const query = `
+            UPDATE clientes SET 
+                edad = ?,
+                genero = ?,
+                altura = ?,
+                peso = ?,
+                cintura = ?,
+                tipo_cuerpo = ?,
+                nivel_actividad = ?,
+                objetivo = ?,
+                restricciones_comida = ?,
+                enfermedades = ?,
+                imc = ?
+            WHERE id = ?
+        `;
+
+        const values = [
+            edad,
+            genero,
+            altura,
+            peso,
+            cintura,
+            tipo_cuerpo,
+            nivel_actividad,
+            objetivo,
+            JSON.stringify(restricciones_comida),
+            JSON.stringify(enfermedades),
+            imc,
+            id
+        ];
+
+        const [result] = await pool.query(query, values);
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({ message: 'Cliente no encontrado' });
+        }
+
+        res.status(200).json({ message: 'Datos actualizados correctamente' });
+    } catch (error) {
+        console.error('Error al actualizar datos del cliente:', error);
+        res.status(500).json({ message: 'Error del servidor' });
+    }
+
+};
+
 module.exports = {
     getCliente,
     getSuscripciones,
-    registrarCliente
+    registrarCliente,
+    datosCliente
 }
