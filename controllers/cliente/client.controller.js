@@ -236,6 +236,21 @@ const renovarSuscripcion = async (req, res) => {
     }
 };
 
+//Consultar clientes con información física completa
+const getCompletos = async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT id, nombre, edad, correo
+            FROM clientes
+            WHERE peso IS NOT NULL
+        `);
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error('Error al obtener clientes con info completa:', error);
+        res.status(500).json({ message: 'Error del servidor al obtener clientes con info completa.' });
+    }
+};
+
 
 
 module.exports = {
@@ -245,5 +260,6 @@ module.exports = {
     datosCliente,
     eliminarCliente,
     actualizarCliente,
-    renovarSuscripcion
+    renovarSuscripcion,
+    getCompletos
 }
