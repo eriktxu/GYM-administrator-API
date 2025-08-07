@@ -47,7 +47,7 @@ const registrarCliente = async (req, res) => {
 
     // Calcular fechas
     const fechaInicio = new Date();
-    let fechaVencimiento = new Date(fechaInicio);
+    let fechaVencimiento = new Date(fechaInicio.getTime());
 
     switch (tipo_suscripcion) {
         case 'mensual':
@@ -196,15 +196,17 @@ const renovarSuscripcion = async (req, res) => {
     const { tipo_suscripcion } = req.body;
     const clienteId = req.params.id;
 
+    let tipo = tipo_suscripcion.toLowerCase();
+
     const tiposValidos = ['mensual', 'trimestral', 'semestral', 'anual'];
-    if (!tiposValidos.includes(tipo_suscripcion.toLowerCase())) {
+    if (!tiposValidos.includes(tipo)) {
         return res.status(400).json({ error: 'Tipo de suscripción no válido' });
     }
 
     const fechaInicio = new Date();
-    let fechaVencimiento = new Date(fechaInicio);
+    let fechaVencimiento = new Date(fechaInicio.getTime());
 
-    switch (tipo_suscripcion) {
+    switch (tipo) {
         case 'mensual':
             fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1);
             break;
@@ -224,9 +226,10 @@ const renovarSuscripcion = async (req, res) => {
     try {
         await db.execute(
             `UPDATE clientes 
-            SET tipo_suscripcion = ?, estado_suscripcion = 'activa', inicio_suscripcion = ?, vencimiento_suscripcion = ?
-            WHERE id = ?`,
-            [tipo_suscripcion, formatDate(fechaInicio), formatDate(fechaVencimiento), clienteId]
+     SET tipo_suscripcion = ?, estado_suscripcion = 'activa', 
+         inicio_suscripcion = ?, vencimiento_suscripcion = ?
+     WHERE id = ?`,
+            [tipo, formatDate(fechaInicio), formatDate(fechaVencimiento), clienteId]
         );
 
         res.status(200).json({ mensaje: 'Suscripción renovada' });
