@@ -1,6 +1,9 @@
 const db = require('../../config/db');
 const express = require("express");
 const router = express.Router();
+const { spawn } = require('child_process');
+const fs = require('fs');
+const path = require('path');
 
 //Consultar clientes
 const getCliente = async (req, res) => {
@@ -251,7 +254,93 @@ const getCompletos = async (req, res) => {
     }
 };
 
+//Endpont para generar plan de rutina y dieta, obtiene datos fisicos
+//Y los manda al script de phyton
+//Obtiene el resultado y combina los pdfs para descargar
+const generarPlan = async (req, res) => {
+    const idCliente = req.params.id;
 
+    try {
+        const PDFMerger = (await import('pdf-merger-js')).default;
+        // 1. Obtener datos físicos del cliente
+        const [rows] = await db.query('SELECT * FROM clientes WHERE id = ?', [idCliente]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+
+        const cliente = rows[0];
+
+        // 2. Preparar datos para Python
+        const inputData = {
+            edad: cliente.edad,
+            genero: cliente.genero,
+            altura: cliente.altura,
+            cintura: cliente.cintura,
+            imc: cliente.imc,
+            tipo_cuerpo: cliente.tipo_cuerpo,
+            nivel_actividad: cliente.nivel_actividad,
+            objetivo: cliente.objetivo,
+            restricciones_comida: cliente.restricciones_comida,
+            enfermedades: cliente.enfermedades,
+            peso: cliente.peso
+        };
+
+        // 3. Llamar al script de Python
+        const py = spawn('python', ['ML/predecir.py', JSON.stringify(inputData)]);
+
+        let output = '';
+        py.stdout.on('data', (data) => output += data.toString());
+
+        py.stderr.on('data', (data) => console.error(`Python error: ${data}`));
+
+        py.on('close', async (code) => {
+            if (code !== 0) return res.status(500).json({ error: 'Error en el modelo de ML' });
+
+            // 4. Parsear la salida
+            const result = JSON.parse(output);
+            const rutina = result.rutina;
+            const dieta = result.dieta;
+
+            // 5. Rutas de los PDF individuales
+            const rutinaPath = path.join(__dirname, '../../ML/recursos/rutinas', `${rutina}.pdf`);
+            const dietaPath = path.join(__dirname, '../../ML/recursos/dietas', `${dieta}.pdf`);
+
+            //Debug para probar que el modelo esta regresando rutina y dieta
+            // console.log('Rutina:', rutina);
+            // console.log('Dieta:', dieta);
+            // console.log('Rutina Path:', rutinaPath);
+            // console.log('Dieta Path:', dietaPath); 
+
+            // Verifica que existan
+            if (!fs.existsSync(rutinaPath) || !fs.existsSync(dietaPath)) {
+                return res.status(404).json({ error: 'No se encontraron los PDFs' });
+            }
+
+            // 6. Combinar los PDFs
+            const merger = new PDFMerger();
+            await merger.add(rutinaPath);
+            await merger.add(dietaPath);
+
+            const outputPath = path.join(__dirname, `../../ML/recursos/resultados/plan_${idCliente}.pdf`);
+            await merger.save(outputPath);
+
+            // 7. Enviar el PDF como descarga
+            res.download(outputPath, `plan_${cliente.nombre}.pdf`, (err) => {
+                if (err) console.error('Error enviando PDF:', err);
+                // Opcional: eliminar el archivo después de enviarlo
+                fs.unlinkSync(outputPath);
+            });
+        });
+
+    } catch (err) {
+        console.error('Error en /generar-plan:', err);
+        res.status(500).json({ error: 'Error interno del servidor' });
+    }
+};
+
+
+module.exports = router;
 
 module.exports = {
     getCliente,
@@ -261,5 +350,6 @@ module.exports = {
     eliminarCliente,
     actualizarCliente,
     renovarSuscripcion,
-    getCompletos
+    getCompletos,
+    generarPlan
 }

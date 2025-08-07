@@ -1,6 +1,13 @@
-from utils import cargar_datos, preprocesar_datos
+import os
 from sklearn.ensemble import RandomForestClassifier
 import joblib
+
+# Obtener la ruta base del script actual (dentro de ML/)
+base_dir = os.path.dirname(os.path.abspath(__file__))  # Ahora apunta a /ML
+ruta_modelos = os.path.join(base_dir, 'modelos')       # /ML/modelos
+
+# Importar utils (ahora está en la misma carpeta ML/)
+from utils import cargar_datos, preprocesar_datos
 
 def entrenar_modelo_rutina():
     # 1. Cargar y preprocesar datos
@@ -15,9 +22,11 @@ def entrenar_modelo_rutina():
     )
     modelo.fit(X, y)
     
-    # 3. Guardar modelo
-    joblib.dump(modelo, 'D:/Dev/Proyectos/GYMS/GYM-administrator-API/ML/modelos/modelo_rutina.pkl')
-    print("✅ Modelo de rutinas entrenado y guardado")
+    # 3. Guardar modelo (usando ruta relativa)
+    os.makedirs(ruta_modelos, exist_ok=True)  # Crear directorio si no existe
+    modelo_path = os.path.join(ruta_modelos, "modelo_rutina.pkl")
+    joblib.dump(modelo, modelo_path)
+    print(f"✅ Modelo guardado en: {modelo_path}")
 
 if __name__ == "__main__":
     entrenar_modelo_rutina()

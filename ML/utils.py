@@ -5,13 +5,18 @@ import numpy as np
 import os
 import joblib
 
+# Obtener la ruta base del script actual
+base_dir = os.path.dirname(os.path.abspath(__file__))
+
 def cargar_datos():
+    # Ruta relativa al archivo CSV
+    data_path = os.path.join(base_dir, 'modelos', 'data.csv')
+    
     # Cargar datos con codificación explícita y eliminar filas vacías
-    datos = pd.read_csv(r"D:/Dev/Proyectos/GYMS/GYM-administrator-API/ML/modelos/data.csv", 
-                encoding='latin1').dropna(how='all')
+    datos = pd.read_csv(data_path, encoding='latin1').dropna(how='all')
     
     # Limpieza adicional de datos (opcional)
-    datos = datos.apply(lambda x: x.str.strip() if x.dtype == "object" else x)  # Elimina espacios en blanco
+    datos = datos.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
     
     return datos
 
@@ -36,8 +41,10 @@ def preprocesar_datos(datos, target, guardar_codificador=False):
     
     # 4. Guardar el codificador si es necesario
     if guardar_codificador:
-        os.makedirs('modelos', exist_ok=True)
-        joblib.dump(transformador, 'D:/Dev/Proyectos/GYMS/GYM-administrator-API/ML/modelos/codificador.pkl')
-        print("✅ Codificador guardado en 'modelos/codificador.pkl'")
+        modelos_dir = os.path.join(base_dir, 'modelos')
+        os.makedirs(modelos_dir, exist_ok=True)
+        codificador_path = os.path.join(modelos_dir, 'codificador.pkl')
+        joblib.dump(transformador, codificador_path)
+        print(f"✅ Codificador guardado en '{codificador_path}'")
     
     return X, y
