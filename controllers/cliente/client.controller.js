@@ -265,7 +265,6 @@ const generarPlan = async (req, res) => {
 
     try {
         const PDFMerger = (await import('pdf-merger-js')).default;
-        // 1. Obtener datos físicos del cliente
         const [rows] = await db.query('SELECT * FROM clientes WHERE id = ?', [idCliente]);
 
         if (rows.length === 0) {
@@ -274,7 +273,6 @@ const generarPlan = async (req, res) => {
 
         const cliente = rows[0];
 
-        // 2. Preparar datos para Python
         const inputData = {
             edad: cliente.edad,
             genero: cliente.genero,
@@ -289,51 +287,35 @@ const generarPlan = async (req, res) => {
             peso: cliente.peso
         };
 
-        // 3. Llamar al script de Python
         const py = spawn('python', ['ML/predecir.py', JSON.stringify(inputData)]);
 
         let output = '';
         py.stdout.on('data', (data) => output += data.toString());
-
         py.stderr.on('data', (data) => console.error(`Python error: ${data}`));
 
         py.on('close', async (code) => {
             if (code !== 0) return res.status(500).json({ error: 'Error en el modelo de ML' });
 
-            // 4. Parsear la salida
             const result = JSON.parse(output);
             const rutina = result.rutina;
             const dieta = result.dieta;
 
-            // 5. Rutas de los PDF individuales
             const rutinaPath = path.join(__dirname, '../../ML/recursos/rutinas', `${rutina}.pdf`);
             const dietaPath = path.join(__dirname, '../../ML/recursos/dietas', `${dieta}.pdf`);
 
-            //Debug para probar que el modelo esta regresando rutina y dieta
-            // console.log('Rutina:', rutina);
-            // console.log('Dieta:', dieta);
-            // console.log('Rutina Path:', rutinaPath);
-            // console.log('Dieta Path:', dietaPath); 
-
-            // Verifica que existan
             if (!fs.existsSync(rutinaPath) || !fs.existsSync(dietaPath)) {
                 return res.status(404).json({ error: 'No se encontraron los PDFs' });
             }
 
-            // 6. Combinar los PDFs
             const merger = new PDFMerger();
             await merger.add(rutinaPath);
             await merger.add(dietaPath);
 
-            const outputPath = path.join(__dirname, `../../ML/recursos/resultados/plan_${idCliente}.pdf`);
-            await merger.save(outputPath);
+            const buffer = await merger.saveAsBuffer();
 
-            // 7. Enviar el PDF como descarga
-            res.download(outputPath, `plan_${cliente.nombre}.pdf`, (err) => {
-                if (err) console.error('Error enviando PDF:', err);
-                // Opcional: eliminar el archivo después de enviarlo
-                fs.unlinkSync(outputPath);
-            });
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=plan_${cliente.nombre}.pdf`);
+            res.send(buffer);
         });
 
     } catch (err) {
@@ -341,6 +323,7 @@ const generarPlan = async (req, res) => {
         res.status(500).json({ error: 'Error interno del servidor' });
     }
 };
+
 
 
 module.exports = router;
