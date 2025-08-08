@@ -34,10 +34,7 @@ class Predictor:
                 'rutina': rutina,
                 'dieta': dieta,
             }
-
-            # print("X:", X)
-            # print("Predicción rutina:", rutina)
-            # print("Predicción dieta:", dieta)
+            
         except Exception as e:
             missing = [col for col in self.codificador.feature_names_in_
                     if col not in usuario_df.columns]

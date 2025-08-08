@@ -11,7 +11,7 @@ router.delete('/eliminar/:id', verifyToken, clienteController.eliminarCliente);
 router.put('/actualizar/:id', verifyToken, clienteController.actualizarCliente);
 router.put('/renovar/:id', verifyToken, clienteController.renovarSuscripcion);
 router.get('/completos', verifyToken, clienteController.getCompletos);
-router.get('/generarPlan/:id', verifyToken, clienteController.generarPlan)
+router.get('/generarPlan/:id', clienteController.generarPlan)
 
 module.exports = router;
 
