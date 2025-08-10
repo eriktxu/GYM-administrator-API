@@ -302,7 +302,7 @@ const generarPlan = async (req, res) => {
 
             const rutinaPath = path.join(__dirname, '../../ML/recursos/rutinas', `${rutina}.pdf`);
             const dietaPath = path.join(__dirname, '../../ML/recursos/dietas', `${dieta}.pdf`);
-
+            
             if (!fs.existsSync(rutinaPath) || !fs.existsSync(dietaPath)) {
                 return res.status(404).json({ error: 'No se encontraron los PDFs' });
             }
