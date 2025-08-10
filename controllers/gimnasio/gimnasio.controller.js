@@ -3,7 +3,7 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 //Registro de entrenador 
-const registerEntrenador = async (req, res) => {
+const registerGimnasio = async (req, res) => {
     const { nombre, correo, telefono, password } = req.body;
 
     if (!nombre || !correo || !telefono || !password) {
@@ -11,7 +11,7 @@ const registerEntrenador = async (req, res) => {
     }
 
     try {
-        const [existing] = await db.query('SELECT * FROM entrenadores WHERE correo = ?', [correo]);
+        const [existing] = await db.query('SELECT * FROM gimnasios WHERE correo = ?', [correo]);
 
         if (existing.length > 0) {
             return res.status(409).json({ message: 'El correo ya está registrado.' });
@@ -21,7 +21,7 @@ const registerEntrenador = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         await db.query(
-            'INSERT INTO entrenadores (nombre, correo, telefono, password) VALUES (?, ?, ?, ?)',
+            'INSERT INTO gimnasios (nombre, correo, telefono, password) VALUES (?, ?, ?, ?)',
             [nombre, correo, telefono, hashedPassword]
         );
 
@@ -35,7 +35,7 @@ const registerEntrenador = async (req, res) => {
 //Login de entrenador 
 const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta_temporal';
 
-const loginEntrenador = async (req, res) => {
+const loginGimnasio = async (req, res) => {
     const { correo, password } = req.body;
 
     if (!correo || !password) {
@@ -43,7 +43,7 @@ const loginEntrenador = async (req, res) => {
     }
 
     try {
-        const [rows] = await db.query('SELECT * FROM entrenadores WHERE correo = ?', [correo]);
+        const [rows] = await db.query('SELECT * FROM gimnasios WHERE correo = ?', [correo]);
 
         if (rows.length === 0) {
             return res.status(401).json({ message: 'Correo o contraseña incorrectos.' });
@@ -82,6 +82,6 @@ const loginEntrenador = async (req, res) => {
 
 
 module.exports = { 
-    registerEntrenador,
-    loginEntrenador
+    registerGimnasio,
+    loginGimnasio
 };
