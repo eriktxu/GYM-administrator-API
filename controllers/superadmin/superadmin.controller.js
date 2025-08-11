@@ -3,33 +3,41 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta_temporal';
 
-//Registro de entrenador 
+// Registro de gimnasio
 const registerGimnasio = async (req, res) => {
     const { nombre, correo, telefono, password } = req.body;
+    const ROL_GIMNASIO_ID = 2;
 
+    // 1. Validación de datos de entrada
     if (!nombre || !correo || !telefono || !password) {
         return res.status(400).json({ message: 'Faltan datos obligatorios.' });
     }
 
     try {
+        // 2. Verificar si el correo ya existe en la tabla 'gimnasios'
         const [existing] = await db.query('SELECT * FROM gimnasios WHERE correo = ?', [correo]);
 
         if (existing.length > 0) {
-            return res.status(409).json({ message: 'El correo ya está registrado.' });
+            return res.status(409).json({ message: 'El correo ya está registrado para otro gimnasio.' });
         }
 
+        // 3. Hashear la contraseña antes de guardarla
         const saltRounds = 10;
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
+        // 4. Insertar el nuevo gimnasio en la base de datos
         await db.query(
-            'INSERT INTO gimnasios (nombre, correo, telefono, password) VALUES (?, ?, ?, ?)',
-            [nombre, correo, telefono, hashedPassword]
+            'INSERT INTO gimnasios (nombre, correo, telefono, password, rol_id) VALUES (?, ?, ?, ?, ?)',
+            [nombre, correo, telefono, hashedPassword, ROL_GIMNASIO_ID] // Se añade el ID del rol al final
         );
 
-        res.status(201).json({ message: 'Entrenador registrado con éxito.' });
+        // --- CORREGIDO --- Mensaje de éxito
+        res.status(201).json({ message: 'Gimnasio registrado con éxito.' });
+
     } catch (error) {
-        console.error('Error al registrar entrenador:', error);
-        res.status(500).json({ message: 'Error del servidor.' });
+        // --- CORREGIDO --- Mensaje de error
+        console.error('Error al registrar gimnasio:', error);
+        res.status(500).json({ message: 'Error en el servidor al registrar el gimnasio.' });
     }
 };
 
@@ -157,7 +165,7 @@ function getRedireccionPorRol(rol_id) {
 }
 
 
-module.exports = { 
+module.exports = {
     registerGimnasio,
     login
 };
