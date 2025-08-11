@@ -2,16 +2,16 @@ require('dotenv');
 const express = require('express');
 const cors = require('cors');
 const app = express();
-const clientRoutes = require('./routes/cliente/client.routes');
-const entrenadoresRoutes = require('./routes/entrenador/entrenador.routes')
+const clientesRoutes = require('./routes/cliente/client.routes');
+const superadminRoutes = require('./routes/superadmin/superadmin.routes')
 
 app.use(cors());
 app.use(express.json());
 
-app.use('/api/clients', clientRoutes);
-app.use('/api/entrenador', entrenadoresRoutes);
+app.use('/api/clientes', clientesRoutes);
+app.use('/api/superadmin', superadminRoutes);
 
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 app.listen(PORT, () => {
     console.log(`Servidor en http://localhost:${PORT}`);
 

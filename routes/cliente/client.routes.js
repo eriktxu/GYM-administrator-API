@@ -1,9 +1,17 @@
 const express = require('express');
 const router = express.Router();
-const clienController = require('../../controllers/cliente/client.controller');
+const clienteController = require('../../controllers/cliente/client.controller');
+const { verifyToken, authorizeRoles } = require('../../middleware/verifyToken');
 
-// router.delete('/:id', clienController.deleteClient);
-// router.post('/register', clientController.registerClient);
+router.get('/conClientes',verifyToken, authorizeRoles(2),  clienteController.getCliente);
+router.get('/conSuscripciones', verifyToken, authorizeRoles(2), clienteController.getSuscripciones);
+router.post('/regisCliente', verifyToken, authorizeRoles(2), clienteController.registrarCliente);
+router.post('/guardar',verifyToken, authorizeRoles(2), clienteController.datosCliente);
+router.delete('/eliminar/:id',verifyToken, authorizeRoles(2),  clienteController.eliminarCliente);
+router.put('/actualizar/:id', verifyToken, authorizeRoles(2), clienteController.actualizarCliente);
+router.put('/renovar/:id', verifyToken, authorizeRoles(2),  clienteController.renovarSuscripcion);
+router.get('/completos', verifyToken, authorizeRoles(1), clienteController.getCompletos);
+router.get('/generarPlan/:id', verifyToken, authorizeRoles(1),clienteController.generarPlan)
 
 module.exports = router;
 
