@@ -26,7 +26,7 @@ const registerGimnasio = async (req, res) => {
             [nombre, correo, telefono, hashedPassword]
         );
 
-        res.status(201).json({ message: 'Entrenador registrado con éxito.' });
+        res.status(201).json({ message: 'Gimnasio registrado con éxito.' });
     } catch (error) {
         console.error('Error al registrar entrenador:', error);
         res.status(500).json({ message: 'Error del servidor.' });

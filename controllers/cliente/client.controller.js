@@ -5,11 +5,22 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-//Consultar clientes
+// Consultar clientes por gimnasio
 const getCliente = async (req, res) => {
     try {
-        const [rows] = await db.query('SELECT id, nombre, correo, telefono FROM clientes');
+        // 1. Obtenemos el ID del gimnasio del objeto 'req.user'.
+        // Este objeto es añadido por el middleware de autenticación.
+        const gimnasioId = req.user.id;
+
+        // 2. Modificamos la consulta SQL para filtrar por 'gimnasio_id'.
+        // Asegúrate de que tu tabla 'clientes' tenga una columna llamada 'gimnasio_id'.
+        const [rows] = await db.query(
+            'SELECT id, nombre, correo, telefono FROM clientes WHERE gimnasio_id = ?', 
+            [gimnasioId] // Pasamos el ID como parámetro para seguridad
+        );
+        
         res.status(200).json(rows);
+
     } catch (error) {
         console.error('Error al obtener clientes:', error);
         res.status(500).json({ message: 'Error del servidor al obtener clientes.' });
