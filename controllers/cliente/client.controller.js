@@ -30,6 +30,11 @@ const getCliente = async (req, res) => {
 //Consultar suscripciones
 const getSuscripciones = async (req, res) => {
     try {
+        // 1. Obtenemos el ID del gimnasio autenticado desde el middleware.
+        const gimnasioId = req.user.id;
+
+        // 2. Añadimos el filtro WHERE a la consulta SQL.
+        // Esto asume que tu tabla `clientes` tiene una columna `gimnasio_id`.
         const [rows] = await db.query(`
             SELECT 
                 id AS cliente_id,
@@ -40,7 +45,9 @@ const getSuscripciones = async (req, res) => {
                 estado_suscripcion
             FROM 
                 clientes
-        `);
+            WHERE 
+                gimnasio_id = ? 
+        `, [gimnasioId]); // Pasamos el ID del gimnasio como parámetro
 
         res.status(200).json(rows);
     } catch (error) {
