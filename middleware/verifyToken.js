@@ -11,6 +11,7 @@ const verifyToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+        console.log('verifyToken - decoded token payload:', decoded); // <--- aquí
         req.user = decoded;
         next();
     } catch (error) {
@@ -18,14 +19,19 @@ const verifyToken = (req, res, next) => {
     }
 };
 
+
 const authorizeRoles = (...allowedRoles) => {
     return (req, res, next) => {
+        console.log('authorizeRoles - req.user:', req.user);
+        console.log('authorizeRoles - allowedRoles:', allowedRoles);
         if (!req.user || !allowedRoles.includes(req.user.rol_id)) {
+            console.log('authorizeRoles - Acceso denegado por rol:', req.user?.rol_id);
             return res.status(403).json({ message: 'No tienes permiso para acceder a esta ruta.' });
         }
         next();
     };
 };
+
 
 module.exports = {
         verifyToken, 
