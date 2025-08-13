@@ -142,6 +142,22 @@ const login = async (req, res) => {
     }
 };
 
+// Consultar gimnasios 
+
+const getGimnasios = async (req, res) => {
+    try {
+        const [rows] = await db.query(`
+            SELECT id, nombre, correo, telefono
+            FROM gimnasios
+            ORDER BY nombre ASC
+        `);
+        res.status(200).json(rows);
+    } catch (error) {
+        console.error("Error al obtener gimnasios:", error);
+        res.status(500).json({ message: "Error del servidor." });
+    }
+};
+
 // Función auxiliar para decidir a qué pantalla redirigir según el rol
 function getRedireccionPorRol(rol_id) {
     switch (rol_id) {
@@ -159,5 +175,6 @@ function getRedireccionPorRol(rol_id) {
 
 module.exports = { 
     registerGimnasio,
-    login
+    login,
+    getGimnasios
 };
