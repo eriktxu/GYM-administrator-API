@@ -6,6 +6,7 @@ const JWT_SECRET = process.env.JWT_SECRET || 'clave_secreta_temporal';
 //Registro de entrenador 
 const registerGimnasio = async (req, res) => {
     const { nombre, correo, telefono, password } = req.body;
+       const ROL_GIMNASIO_ID = 2; 
 
     if (!nombre || !correo || !telefono || !password) {
         return res.status(400).json({ message: 'Faltan datos obligatorios.' });
@@ -22,11 +23,13 @@ const registerGimnasio = async (req, res) => {
         const hashedPassword = await bcrypt.hash(password, saltRounds);
 
         await db.query(
-            'INSERT INTO gimnasios (nombre, correo, telefono, password) VALUES (?, ?, ?, ?)',
-            [nombre, correo, telefono, hashedPassword]
+            // 1. Añade 'rol_id' a la lista de columnas
+            'INSERT INTO gimnasios (nombre, correo, telefono, password, rol_id) VALUES (?, ?, ?, ?, ?)',
+            // 2. Añade la variable ROL_GIMNASIO_ID a la lista de valores
+            [nombre, correo, telefono, hashedPassword, ROL_GIMNASIO_ID]
         );
 
-        res.status(201).json({ message: 'Entrenador registrado con éxito.' });
+        res.status(201).json({ message: 'Gimnasio registrado con éxito.' });
     } catch (error) {
         console.error('Error al registrar entrenador:', error);
         res.status(500).json({ message: 'Error del servidor.' });
