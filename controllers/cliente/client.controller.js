@@ -5,6 +5,8 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+require('dotenv').config();
 
 // Consultar clientes por gimnasio
 const getCliente = async (req, res) => {
@@ -288,6 +290,122 @@ const getCompletos = async (req, res) => {
     }
 };
 
+//Generarplan con IA\
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+require('dotenv').config();
+const generarPlanIA = async (req, res) => {
+    const idCliente = req.params.id;
+    console.log("Iniciando generación de plan COMPLETO con IA para el cliente:", idCliente);
+
+    try {
+        // 1. Obtener datos físicos del cliente (sin cambios)
+        const [rows] = await db.query('SELECT * FROM clientes WHERE id = ?', [idCliente]);
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Cliente no encontrado' });
+        }
+        const cliente = rows[0];
+
+        // Se eliminó por completo la llamada al script de Python.
+
+        // 2. ✨ CREAR EL NUEVO "SÚPER PROMPT" PARA RUTINA Y DIETA ✨
+        const modeloIA = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+        const restriccionesStr = JSON.parse(cliente.restricciones_comida).join(', ') || 'Ninguna';
+        const enfermedadesStr = JSON.parse(cliente.enfermedades).join(', ') || 'Ninguna';
+
+        const prompt = `
+            Actúa como un entrenador personal y nutricionista de élite. Genera un plan integral que incluya tanto una rutina de ejercicios para un día como un plan de alimentación para un día para el siguiente perfil:
+
+            **Datos del Usuario:**
+            - Edad: ${cliente.edad} años
+            - Género: ${cliente.genero}
+            - Peso: ${cliente.peso} kg
+            - Altura: ${cliente.altura} cm
+            - Objetivo Principal: ${cliente.objetivo}
+            - Nivel de Actividad: ${cliente.nivel_actividad}
+            - Enfermedades a considerar: ${enfermedadesStr}
+            - Restricciones Alimentarias: ${restriccionesStr}
+
+            **Requisitos de Formato y Contenido:**
+            1.  **Formato Obligatorio:** La respuesta DEBE ser únicamente un objeto JSON válido, sin texto adicional, explicaciones o markdown.
+            2.  **Estructura JSON Principal:** El objeto raíz debe tener dos claves: "rutina" y "dieta".
+            3.  **Estructura de "dieta":** Debe ser un objeto con claves "desayuno", "almuerzo" y "cena". Cada comida debe ser un objeto con "platillo" (string), "ingredientes" (array de strings) y "preparacion" (string). Los ingredientes deben ser comunes en México.
+            4.  **Estructura de "rutina":** Debe ser un objeto con "nombre" (ej: "Día de Empuje - Pecho y Tríceps"), "enfoque" (ej: "Hipertrofia y Fuerza"), y "ejercicios" (un array de objetos). Cada ejercicio debe tener "nombre" (string), "series" (número), "repeticiones" (string, ej: "8-12") y "descanso_seg" (número). Los ejercicios deben ser para un gimnasio estándar.
+
+            El plan completo debe estar alineado con el objetivo principal del usuario.
+        `;
+
+        console.log("----- PROMPT QUE SE ENVIARÁ A LA IA -----");
+        console.log(prompt);
+        console.log("-----------------------------------------");
+
+        // 3. LLAMAR A LA API Y PROCESAR LA RESPUESTA
+        // Creamos un objeto de petición más estructurado
+        const request = {
+            contents: [{ parts: [{ text: prompt }] }],
+        };
+
+        // Enviamos el objeto de petición en lugar del texto simple
+        const resultIA = await modeloIA.generateContent(request);
+        const responseIA = await resultIA.response;
+
+        const MAX_REINTENTOS = 3;
+        let planCompleto;
+
+        for (let i = 0; i < MAX_REINTENTOS; i++) {
+            try {
+                console.log(`Intento de llamada a la IA #${i + 1}`);
+
+                const modeloIA = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                const prompt = `... tu prompt ...`;
+
+                const resultIA = await modeloIA.generateContent(prompt);
+                const responseIA = await resultIA.response;
+
+                const textoLimpio = responseIA.text().replace(/```json/g, '').replace(/```/g, '').trim();
+                // ¡AGREGA ESTA LÍNEA PARA VER LA RESPUESTA!
+                console.log("===== TEXTO RECIBIDO DE LA IA =====");
+                console.log(textoLimpio);
+                console.log("===================================");
+                planCompleto = JSON.parse(textoLimpio);
+
+                // Si llegamos aquí, todo salió bien, rompemos el bucle.
+                break;
+
+            } catch (error) {
+                // Verificamos si es un error de sobrecarga (503)
+                if (error.status === 503 && i < MAX_REINTENTOS - 1) {
+                    console.warn(`Modelo sobrecargado. Reintentando en ${Math.pow(2, i)} segundos...`);
+                    // Esperamos un tiempo antes del siguiente reintento (1s, 2s, 4s...)
+                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
+                } else {
+                    // Si es otro error o el último reintento, lanzamos la excepción para que el catch principal la maneje
+                    throw error;
+                }
+            }
+        }
+
+        if (!planCompleto) {
+            return res.status(503).json({ error: "El modelo de IA está actualmente sobrecargado. Por favor, inténtalo más tarde." });
+        }
+
+        // ENVIAR EL PLAN COMPLETO AL FRONTEND
+        res.json({
+            ...planCompleto,
+            mensaje: "Plan de rutina y dieta generado exitosamente por IA."
+        });
+
+    } catch (err) {
+        console.error('Error en /generarPlanIA:', err);
+        res.status(500).json({ error: 'Error interno del servidor', details: err.message });
+    }
+};
+
+// No olvides exportar la función si estás en un archivo de controlador
+module.exports = {
+    // ...tus otras funciones
+    generarPlanIA
+};
 //Endpont para generar plan de rutina y dieta, obtiene datos fisicos
 //Y los manda al script de phyton
 //Obtiene el resultado y combina los pdfs para descargar
@@ -422,5 +540,6 @@ module.exports = {
     getCompletos,
     generarPlan,
     getProgresoCliente,
-    getEstadoActual
+    getEstadoActual,
+    generarPlanIA
 }
