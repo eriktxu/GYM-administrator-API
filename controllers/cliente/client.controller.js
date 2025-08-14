@@ -4,6 +4,7 @@ const router = express.Router();
 const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
+const bcrypt = require('bcrypt');
 
 // Consultar clientes por gimnasio
 const getCliente = async (req, res) => {
@@ -15,10 +16,10 @@ const getCliente = async (req, res) => {
         // 2. Modificamos la consulta SQL para filtrar por 'gimnasio_id'.
         // Asegúrate de que tu tabla 'clientes' tenga una columna llamada 'gimnasio_id'.
         const [rows] = await db.query(
-            'SELECT id, nombre, correo, telefono FROM clientes WHERE gimnasio_id = ?', 
+            'SELECT id, nombre, correo, telefono FROM clientes WHERE gimnasio_id = ?',
             [gimnasioId] // Pasamos el ID como parámetro para seguridad
         );
-        
+
         res.status(200).json(rows);
 
     } catch (error) {
@@ -57,16 +58,26 @@ const getSuscripciones = async (req, res) => {
 };
 
 //Registrar clientes 
+// En tu controlador del backend
 const registrarCliente = async (req, res) => {
-    const { nombre, correo, telefono, tipo_suscripcion } = req.body;
+    const gimnasioId = req.user.id;
+    const ROL_CLIENTE_ID = 1;
 
-    // Validar tipo de suscripción
+    // 2. Obtén la contraseña del cuerpo de la petición
+    const { nombre, correo, telefono, tipo_suscripcion, password } = req.body;
+
+    // --- Validación de contraseña (opcional pero recomendado) ---
+    if (!password || password.length < 6) {
+        return res.status(400).json({ error: 'La contraseña es obligatoria y debe tener al menos 6 caracteres.' });
+    }
+    // -----------------------------------------------------------
+
     const tiposValidos = ['mensual', 'trimestral', 'semestral', 'anual'];
     if (!tiposValidos.includes(tipo_suscripcion)) {
         return res.status(400).json({ error: 'Tipo de suscripción no válido' });
     }
 
-    // Calcular fechas
+    // ... (toda tu lógica para calcular fechas se queda igual)
     const fechaInicio = new Date();
     let fechaVencimiento = new Date(fechaInicio.getTime());
 
@@ -85,20 +96,25 @@ const registrarCliente = async (req, res) => {
             break;
     }
 
-    // Convertir a formato YYYY-MM-DD
     const formatDate = (date) => date.toISOString().split('T')[0];
     const inicio_suscripcion = formatDate(fechaInicio);
     const vencimiento_suscripcion = formatDate(fechaVencimiento);
 
     try {
+        // 3. Hashea la contraseña antes de guardarla
+        const saltRounds = 10;
+        const hashedPassword = await bcrypt.hash(password, saltRounds);
+
+        // 4. Añade la columna 'password' a la consulta INSERT
         const [result] = await db.execute(
             `INSERT INTO clientes 
-                (nombre, correo, telefono, tipo_suscripcion, estado_suscripcion, inicio_suscripcion, vencimiento_suscripcion)
-                VALUES (?, ?, ?, ?, 'activa', ?, ?)`,
-            [nombre, correo, telefono, tipo_suscripcion, inicio_suscripcion, vencimiento_suscripcion]
+                (nombre, correo, telefono, tipo_suscripcion, estado_suscripcion, inicio_suscripcion, vencimiento_suscripcion, gimnasio_id, rol_id, password)
+             VALUES (?, ?, ?, ?, 'activa', ?, ?, ?, ?, ?)`,
+            // 5. Añade la contraseña hasheada al array de valores
+            [nombre, correo, telefono, tipo_suscripcion, inicio_suscripcion, vencimiento_suscripcion, gimnasioId, ROL_CLIENTE_ID, hashedPassword]
         );
 
-        res.status(201).json({ mensaje: 'Cliente registrado', clienteId: result.insertId });
+        res.status(201).json({ mensaje: 'Cliente registrado con éxito', clienteId: result.insertId });
     } catch (error) {
         console.error('Error al registrar cliente:', error);
         res.status(500).json({ error: 'Error al registrar el cliente' });
@@ -106,70 +122,67 @@ const registrarCliente = async (req, res) => {
 };
 
 //Enviar datos de cliente
+//Enviar datos de cliente y guardar historial
 const datosCliente = async (req, res) => {
+    // 1. Obtener el ID del usuario desde el token (fuente segura)
+    const clienteId = req.user.id;
+
+    // 2. Obtener los datos del cuerpo de la petición
     const {
-        id,
-        edad,
-        genero,
-        altura,
-        peso,
-        cintura,
-        tipo_cuerpo,
-        nivel_actividad,
-        objetivo,
-        restricciones_comida,
-        enfermedades,
-        imc
+        edad, genero, altura, peso, cintura, tipo_cuerpo,
+        nivel_actividad, objetivo, restricciones_comida,
+        enfermedades, imc
     } = req.body;
 
+    // Obtener una conexión del pool para manejar la transacción
+    const connection = await db.getConnection();
+
     try {
-        const query = `
-            UPDATE clientes SET 
-                edad = ?,
-                genero = ?,
-                altura = ?,
-                peso = ?,
-                cintura = ?,
-                tipo_cuerpo = ?,
-                nivel_actividad = ?,
-                objetivo = ?,
-                restricciones_comida = ?,
-                enfermedades = ?,
-                imc = ?
+        // Iniciar la transacción
+        await connection.beginTransaction();
+
+        // TAREA A: Insertar los datos actuales en la tabla de historial
+        const historialQuery = `
+            INSERT INTO historial_clientes (cliente_id, peso, altura, cintura, imc)
+            VALUES (?, ?, ?, ?, ?)
+        `;
+        const historialValues = [clienteId, peso, altura, cintura, imc];
+        await connection.query(historialQuery, historialValues);
+
+        // TAREA B: Actualizar la tabla principal de clientes con toda la información
+        const updateQuery = `
+            UPDATE clientes SET
+                edad = ?, genero = ?, altura = ?, peso = ?, cintura = ?,
+                tipo_cuerpo = ?, nivel_actividad = ?, objetivo = ?,
+                restricciones_comida = ?, enfermedades = ?, imc = ?
             WHERE id = ?
         `;
-
-        const values = [
-            edad,
-            genero,
-            altura,
-            peso,
-            cintura,
-            tipo_cuerpo,
-            nivel_actividad,
-            objetivo,
-            JSON.stringify(restricciones_comida),
-            JSON.stringify(enfermedades),
-            imc,
-            id
+        const updateValues = [
+            edad, genero, altura, peso, cintura, tipo_cuerpo,
+            nivel_actividad, objetivo, JSON.stringify(restricciones_comida),
+            JSON.stringify(enfermedades), imc,
+            clienteId // Usar el ID seguro del token
         ];
+        const [result] = await connection.query(updateQuery, updateValues);
 
-        // console.log("Datos recibidos:", req.body); // Para verificar lo que llega
-        // console.log("Query:", query);
-        // console.log("Values:", values);
-
-        const [result] = await db.query(query, values);
-
-        // console.log("Resultado de la actualización:", result);
+        // Si todo fue exitoso, confirmar los cambios
+        await connection.commit();
 
         if (result.affectedRows === 0) {
+            // Este caso es raro si el token es válido, pero es bueno tenerlo
             return res.status(404).json({ message: 'Cliente no encontrado' });
         }
 
-        res.status(200).json({ message: 'Datos actualizados correctamente' });
+        res.status(200).json({ message: 'Perfil actualizado y progreso guardado correctamente' });
+
     } catch (error) {
+        // Si ocurre cualquier error, revertir todos los cambios
+        await connection.rollback();
         console.error('Error al actualizar datos del cliente:', error);
-        res.status(500).json({ message: 'Error del servidor' });
+        res.status(500).json({ message: 'Error del servidor al guardar los datos' });
+    } finally {
+        // Siempre liberar la conexión al final, sin importar si hubo éxito o error
+        connection.release();
     }
 };
 
@@ -320,7 +333,7 @@ const generarPlan = async (req, res) => {
 
             const rutinaPath = path.join(__dirname, '../../ML/recursos/rutinas', `${rutina}.pdf`);
             const dietaPath = path.join(__dirname, '../../ML/recursos/dietas', `${dieta}.pdf`);
-            
+
             if (!fs.existsSync(rutinaPath) || !fs.existsSync(dietaPath)) {
                 return res.status(404).json({ error: 'No se encontraron los PDFs' });
             }
@@ -343,6 +356,58 @@ const generarPlan = async (req, res) => {
 };
 
 
+const getProgresoCliente = async (req, res) => {
+    const clienteId = req.user.id; // Obtiene el ID del cliente logueado
+
+    try {
+        const query = `
+            SELECT peso, imc, fecha_registro 
+            FROM historial_clientes 
+            WHERE cliente_id = ? 
+            ORDER BY fecha_registro ASC
+        `;
+        const [historial] = await db.query(query, [clienteId]);
+        res.status(200).json(historial);
+    } catch (error) {
+        console.error('Error al obtener el historial del cliente:', error);
+        res.status(500).json({ message: 'Error del servidor.' });
+    }
+};
+
+const getEstadoActual = async (req, res) => {
+    // El ID se obtiene del token, es seguro y no se puede falsificar.
+    const clienteId = req.user.id;
+
+    try {
+        // Seleccionamos los campos necesarios para la tarjeta de resumen del dashboard.
+        const query = `
+            SELECT 
+                nombre,
+                peso,
+                imc,
+                tipo_suscripcion,
+                vencimiento_suscripcion,
+                estado_suscripcion
+            FROM 
+                clientes 
+            WHERE 
+                id = ?
+        `;
+
+        const [rows] = await db.query(query, [clienteId]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ message: 'Perfil de cliente no encontrado.' });
+        }
+
+        // Devolvemos el primer (y único) resultado.
+        res.status(200).json(rows[0]);
+
+    } catch (error) {
+        console.error('Error al obtener el perfil del cliente:', error);
+        res.status(500).json({ message: 'Error del servidor.' });
+    }
+};
 
 module.exports = router;
 
@@ -355,5 +420,7 @@ module.exports = {
     actualizarCliente,
     renovarSuscripcion,
     getCompletos,
-    generarPlan
+    generarPlan,
+    getProgresoCliente,
+    getEstadoActual
 }
