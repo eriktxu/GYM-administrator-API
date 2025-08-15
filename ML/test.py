@@ -10,12 +10,12 @@ datos_ejemplo = {
     'altura': 165,
     'peso': 60,
     'imc': 22.04,
-    'cintura': 70,  # <-- Añadido
+    'cintura': 70,  
     'tipo_cuerpo': 'Mesomorfo',
     'nivel_actividad': 'Activo',
     'objetivo': 'Ganar masa muscular',
-    'restricciones_comida': "['Vegetariano']",  # <-- Necesario para num_restricciones
-    'enfermedades': "['Asma']"  # <-- Necesario para num_enfermedades
+    'restricciones_comida': "['Lacteos']", 
+    'enfermedades': "['Asma']",
 }
 
 if __name__ == "__main__":
@@ -25,7 +25,6 @@ if __name__ == "__main__":
         print("\n🔍 Resultado de la predicción:")
         print(f"Rutina recomendada: {resultado['rutina']}")
         print(f"Dieta recomendada: {resultado['dieta']}")
-        print(f"Detalles: {resultado['detalles']}")
     except Exception as e:
         print(f"\n❌ Error: {str(e)}")
         print("\nℹ️ Asegúrate de incluir TODAS estas columnas:")

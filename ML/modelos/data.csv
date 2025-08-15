@@ -1,26 +1,31 @@
 edad,genero,altura,cintura,imc,tipo_cuerpo,nivel_actividad,objetivo,restricciones_comida,enfermedades,peso,rutina_asignada,dieta_asignada
 28,F,165,70,22.04,Mesomorfo,Activo,Ganar masa muscular,['Vegetariano'],['Asma'],60,HipertrofiaMixta,VegetarianaProteica
-45,M,180,95,27.78,Endomorfo,Sedentario,Perder Grasa,"['Gluten', 'Lácteos']","['Diabetes', 'Hipertensión']",90,CardioLigero,KetoModerado
+45,M,180,95,27.78,Endomorfo,Sedentario,Perder Grasa,"['Gluten', 'Lç•¶teos']","['Diabetes', 'Hipertensiî‰¢']",90,CardioLigero,KetoModerado
 32,F,160,75,21.48,Ectomorfo,Moderado,Mantenimiento,['Ninguna'],['Obesidad'],55,FullBodyIntermedio,BalanceadaEstandar
 50,M,170,85,27.68,Endomorfo,Moderado,Perder Grasa,['Mariscos'],['Dislipidemias'],80,CardioIntenso,DeficitCalorico
 22,F,158,65,20.03,Ectomorfo,Activo,Ganar masa muscular,['Vegano'],['Ninguna'],50,HipertrofiaMixta,VegetarianaProteica
 60,M,175,100,27.76,Mesomorfo,Sedentario,Mantenimiento,['Frutos secos'],['Artritis'],85,MovilidadRehabilitacion,IntoleranciaLactosa
 29,F,168,72,21.99,Mesomorfo,Moderado,Perder Grasa,['Ninguna'],['Ninguna'],62,DefinicionFuncional,DeficitCalorico
 35,M,182,88,28.68,Endomorfo,Activo,Ganar masa muscular,['Huevo'],['Obesidad'],95,FuerzaAvanzado,AltaProteina
-40,F,163,78,26.34,Mesomorfo,Moderado,Perder Grasa,"['Lácteos', 'Soja']",['Tiroides'],70,DefinicionFuncional,KetoModerado
+40,F,163,78,26.34,Mesomorfo,Moderado,Perder Grasa,"['Lç•¶teos', 'Soja']",['Tiroides'],70,DefinicionFuncional,KetoModerado
 25,M,190,92,22.16,Ectomorfo,Activo,Ganar masa muscular,['Ninguna'],['Ninguna'],80,FuerzaAvanzado,AltaProteina
-55,F,155,85,31.22,Endomorfo,Sedentario,Perder Grasa,['Vegetariano'],"['Diabetes', 'Cardí­aca']",75,MovilidadRehabilitacion,DiabeticoControlado
+55,F,155,85,31.22,Endomorfo,Sedentario,Perder Grasa,['Vegetariano'],"['Diabetes', 'Cardiaca']",75,MovilidadRehabilitacion,DiabeticoControlado
 30,M,178,82,24.3,Mesomorfo,Activo,Mantenimiento,['Pescado'],['Asma'],77,FullBodyIntermedio,BalanceadaEstandar
-27,F,167,68,20.8,Ectomorfo,Moderado,Ganar masa muscular,['Lácteos'],['Ninguna'],58,HipertrofiaMixta,IntoleranciaLactosa
+27,F,167,68,20.8,Ectomorfo,Moderado,Ganar masa muscular,['Lateos'],['Ninguna'],58,HipertrofiaMixta,IntoleranciaLactosa
 48,M,176,94,29.05,Endomorfo,Sedentario,Perder Grasa,['Gluten'],['Osteoporosis'],90,CardioLigero,KetoModerado
-33,F,162,70,22.49,Mesomorfo,Activo,Mantenimiento,"['Vegano', 'Lácteos']",['Ninguna'],59,DefinicionFuncional,VegetarianaProteica
-38,M,181,89,28.09,Endomorfo,Moderado,Perder Grasa,['Ninguna'],['Hipertensión'],92,CardioIntenso,BajaEnSodio
+33,F,162,70,22.49,Mesomorfo,Activo,Mantenimiento,"['Vegano', 'Lacteos']",['Ninguna'],59,DefinicionFuncional,VegetarianaProteica
+38,M,181,89,28.09,Endomorfo,Moderado,Perder Grasa,['Ninguna'],['Hipertension'],92,CardioIntenso,BajaEnSodio
 26,F,170,75,22.49,Ectomorfo,Activo,Ganar masa muscular,['Frutos secos'],['Ninguna'],65,HipertrofiaMixta,AltaProteina
 42,M,175,90,27.76,Mesomorfo,Sedentario,Mantenimiento,"['Mariscos', 'Huevo']",['Artritis'],85,MovilidadRehabilitacion,IntoleranciaLactosa
-31,F,164,76,26.77,Endomorfo,Moderado,Perder Grasa,['Lácteos'],['Cardí­aca'],72,DefinicionFuncional,BajaEnSodio
+31,F,164,76,26.77,Endomorfo,Moderado,Perder Grasa,['Lacteos'],['Cardiaca'],72,DefinicionFuncional,BajaEnSodio
 29,M,185,87,22.79,Ectomorfo,Activo,Ganar masa muscular,['Ninguna'],['Ninguna'],78,FuerzaAvanzado,AltaProteina
-,,,,,,,,,,,,
-,,,,,,,,,,,,
-,,,,,,,,,,,,
-,,,,,,,,,,,,
-,,,,,,,,,,,,
+51,M,175,88,28.73,Endomorfo,Moderado,Perder Grasa,['Lacteos'],['Hipertension'],85,CardioLigero,DietaKetoSinLacteos
+34,F,166,72,26.1,Mesomorfo,Activo,Mantenimiento,['LÃ¡cteos'],['Ninguna'],64,FullBodyIntermedio,DietaSinLacteos
+29,M,182,80,24.15,Ectomorfo,Activo,Ganar masa muscular,['LÃ¡cteos'],['Asma'],75,HipertrofiaMixta,DietaSinLacteos
+46,F,160,80,31.25,Endomorfo,Sedentario,Perder Grasa,['Gluten'],['Diabetes'],78,MovilidadRehabilitacion,DietaSinGluten
+38,M,179,85,26.5,Mesomorfo,Activo,Mantenimiento,"['Gluten', 'LÃ¡cteos']",['Ninguna'],82,DefinicionFuncional,DietaKetoSinLacteos
+26,F,170,65,22.49,Ectomorfo,Moderado,Ganar masa muscular,['LÃ¡cteos'],['Ninguna'],60,HipertrofiaMixta,DietaSinLacteos
+58,M,172,95,32.1,Endomorfo,Sedentario,Perder Grasa,['LÃ¡cteos'],['CardÃ­aca'],92,CardioLigero,DietaKetoSinLacteos
+31,F,168,70,24.8,Mesomorfo,Activo,Perder Grasa,['Gluten'],['Tiroides'],68,CardioIntenso,DietaSinGluten
+42,M,185,88,25.7,Mesomorfo,Activo,Mantenimiento,"['Pescado', 'LÃ¡cteos']",['Ninguna'],84,FuerzaAvanzado,DietaSinLacteos
+49,F,158,75,30,Endomorfo,Moderado,Perder Grasa,"['Vegetariano', 'LÃ¡cteos']",['HipertensiÃ³n'],72,CardioLigero,DietaSinLacteos

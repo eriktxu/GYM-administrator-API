@@ -9,7 +9,6 @@ import joblib
 base_dir = os.path.dirname(os.path.abspath(__file__))
 
 def cargar_datos():
-    # Ruta relativa al archivo CSV
     data_path = os.path.join(base_dir, 'modelos', 'data.csv')
     
     # Cargar datos con codificación explícita y eliminar filas vacías
@@ -39,7 +38,7 @@ def preprocesar_datos(datos, target, guardar_codificador=False):
     X = transformador.fit_transform(datos[categoricas + numericas])
     y = datos[target]
     
-    # 4. Guardar el codificador si es necesario
+    # 4. Guardar el codificador
     if guardar_codificador:
         modelos_dir = os.path.join(base_dir, 'modelos')
         os.makedirs(modelos_dir, exist_ok=True)

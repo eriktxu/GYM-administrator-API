@@ -17,7 +17,6 @@ class Predictor:
         try:
             usuario_df = pd.DataFrame([datos_usuario])
 
-            # Ya no necesitas json.loads() porque los campos ya son listas
             usuario_df['num_restricciones'] = usuario_df['restricciones_comida'].apply(
                 lambda x: len(x) if pd.notna(x) else 0)
             usuario_df['num_enfermedades'] = usuario_df['enfermedades'].apply(

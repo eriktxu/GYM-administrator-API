@@ -15,7 +15,7 @@ def entrenar_modelo_dieta():
     modelo = GradientBoostingClassifier()
     modelo.fit(X, y)
     
-    # 3. Guardar modelo (usando ruta relativa)
+    # 3. Guardar modelo
     modelos_dir = os.path.join(base_dir, 'modelos')
     os.makedirs(modelos_dir, exist_ok=True)  # Crear directorio si no existe
     modelo_path = os.path.join(modelos_dir, 'modelo_dieta.pkl')

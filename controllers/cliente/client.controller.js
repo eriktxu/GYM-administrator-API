@@ -1,3 +1,4 @@
+require('dotenv').config();
 const db = require('../../config/db');
 const express = require("express");
 const router = express.Router();
@@ -5,8 +6,11 @@ const { spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcrypt');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
-require('dotenv').config();
+const OpenAI = require('openai');
+
+const openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Consultar clientes por gimnasio
 const getCliente = async (req, res) => {
@@ -144,12 +148,12 @@ const datosCliente = async (req, res) => {
         await connection.beginTransaction();
 
         // TAREA A: Insertar los datos actuales en la tabla de historial
-        const historialQuery = `
-            INSERT INTO historial_clientes (cliente_id, peso, altura, cintura, imc)
-            VALUES (?, ?, ?, ?, ?)
-        `;
-        const historialValues = [clienteId, peso, altura, cintura, imc];
-        await connection.query(historialQuery, historialValues);
+        // const historialQuery = `
+        //     INSERT INTO historial_clientes (cliente_id, peso, altura, cintura, imc)
+        //     VALUES (?, ?, ?, ?, ?)
+        // `;
+        // const historialValues = [clienteId, peso, altura, cintura, imc];
+        // await connection.query(historialQuery, historialValues);
 
         // TAREA B: Actualizar la tabla principal de clientes con toda la información
         const updateQuery = `
@@ -290,122 +294,107 @@ const getCompletos = async (req, res) => {
     }
 };
 
-//Generarplan con IA\
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-require('dotenv').config();
+
 const generarPlanIA = async (req, res) => {
     const idCliente = req.params.id;
-    console.log("Iniciando generación de plan COMPLETO con IA para el cliente:", idCliente);
+    console.log(`[1] Iniciando generación de plan COMPLETO con OpenAI para el cliente: ${idCliente}`);
 
     try {
-        // 1. Obtener datos físicos del cliente (sin cambios)
+        // 1. Obtener datos del cliente de la BD
         const [rows] = await db.query('SELECT * FROM clientes WHERE id = ?', [idCliente]);
         if (rows.length === 0) {
             return res.status(404).json({ error: 'Cliente no encontrado' });
         }
         const cliente = rows[0];
 
-        // Se eliminó por completo la llamada al script de Python.
-
-        // 2. ✨ CREAR EL NUEVO "SÚPER PROMPT" PARA RUTINA Y DIETA ✨
-        const modeloIA = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-
-        const restriccionesStr = JSON.parse(cliente.restricciones_comida).join(', ') || 'Ninguna';
-        const enfermedadesStr = JSON.parse(cliente.enfermedades).join(', ') || 'Ninguna';
+        // 2. Preparar datos y construir el prompt
+        const restricciones = cliente.restricciones_comida ? JSON.parse(cliente.restricciones_comida) : [];
+        const restriccionesStr = restricciones.join(', ') || 'Ninguna';
+        const enfermedades = cliente.enfermedades ? JSON.parse(cliente.enfermedades) : [];
+        const enfermedadesStr = enfermedades.join(', ') || 'Ninguna';
 
         const prompt = `
-            Actúa como un entrenador personal y nutricionista de élite. Genera un plan integral que incluya tanto una rutina de ejercicios para un día como un plan de alimentación para un día para el siguiente perfil:
+    Actúa como un entrenador personal y nutricionista de élite. Genera un plan integral para una SEMANA COMPLETA (Lunes a Domingo) que incluya tanto una rutina de ejercicios como un plan de alimentación para el siguiente perfil:
 
-            **Datos del Usuario:**
-            - Edad: ${cliente.edad} años
-            - Género: ${cliente.genero}
-            - Peso: ${cliente.peso} kg
-            - Altura: ${cliente.altura} cm
-            - Objetivo Principal: ${cliente.objetivo}
-            - Nivel de Actividad: ${cliente.nivel_actividad}
-            - Enfermedades a considerar: ${enfermedadesStr}
-            - Restricciones Alimentarias: ${restriccionesStr}
+    **Datos del Usuario:**
+    - Edad: ${cliente.edad} años
+    - Género: ${cliente.genero}
+    - Peso: ${cliente.peso} kg
+    - Altura: ${cliente.altura} cm
+    - Objetivo Principal: ${cliente.objetivo}
+    - Nivel de Actividad: ${cliente.nivel_actividad}
+    - Enfermedades a considerar: ${enfermedadesStr}
+    - Restricciones Alimentarias: ${restriccionesStr}
 
-            **Requisitos de Formato y Contenido:**
-            1.  **Formato Obligatorio:** La respuesta DEBE ser únicamente un objeto JSON válido, sin texto adicional, explicaciones o markdown.
-            2.  **Estructura JSON Principal:** El objeto raíz debe tener dos claves: "rutina" y "dieta".
-            3.  **Estructura de "dieta":** Debe ser un objeto con claves "desayuno", "almuerzo" y "cena". Cada comida debe ser un objeto con "platillo" (string), "ingredientes" (array de strings) y "preparacion" (string). Los ingredientes deben ser comunes en México.
-            4.  **Estructura de "rutina":** Debe ser un objeto con "nombre" (ej: "Día de Empuje - Pecho y Tríceps"), "enfoque" (ej: "Hipertrofia y Fuerza"), y "ejercicios" (un array de objetos). Cada ejercicio debe tener "nombre" (string), "series" (número), "repeticiones" (string, ej: "8-12") y "descanso_seg" (número). Los ejercicios deben ser para un gimnasio estándar.
+    **Requisitos de Formato y Contenido:**
+    1.  **Formato Obligatorio:** La respuesta DEBE ser únicamente un objeto JSON válido, sin texto adicional.
+    2.  **Estructura Principal:** El objeto raíz debe tener dos claves: "dieta_semanal" y "rutina_semanal".
+    3.  **Estructura de "dieta_semanal":** Debe ser un ARRAY de 7 objetos. Cada objeto debe representar un día y tener las claves: "dia" (ej: "Lunes"), "desayuno" (objeto con "platillo" e "ingredientes"), "almuerzo" (objeto con "platillo" e "ingredientes") y "cena" (objeto con "platillo" e "ingredientes").
+    4.  **Estructura de "rutina_semanal":** Debe ser un ARRAY de 7 objetos. Cada objeto debe representar un día y tener las claves: "dia" (ej: "Lunes"), "nombre_rutina" (ej: "Tren Superior - Empuje"), "enfoque" (ej: "Hipertrofia"), y "ejercicios" (un array de objetos, donde cada uno tiene "nombre", "series", "repeticiones" y "descanso_seg"). Un día puede ser de descanso (ej: "dia": "Domingo", "nombre_rutina": "Descanso Activo").
+    5.  **Variedad:** Asegúrate de que haya variedad en los platillos y ejercicios durante la semana para evitar la monotonía.
 
-            El plan completo debe estar alineado con el objetivo principal del usuario.
-        `;
+    El plan completo debe estar alineado con el objetivo principal del usuario.
+`;
+        
+        console.log("[2] Prompt creado. A punto de llamar a la API de OpenAI...");
 
-        console.log("----- PROMPT QUE SE ENVIARÁ A LA IA -----");
-        console.log(prompt);
-        console.log("-----------------------------------------");
+        // 3. Llamar a la API de OpenAI con el timeout corregido
+        const responseIA = await openai.chat.completions.create({
+            model: "gpt-3.5-turbo",
+            messages: [
+                { role: "system", content: "Eres un experto en fitness y nutrición que solo responde con objetos JSON válidos." },
+                { role: "user", content: prompt }
+            ],
+            response_format: { type: "json_object" },
+        }, { 
+            timeout: 30000, // 30 segundos en un objeto de opciones separado
+        });
+        
+        console.log("[3] ¡Respuesta recibida de la API de OpenAI!");
 
-        // 3. LLAMAR A LA API Y PROCESAR LA RESPUESTA
-        // Creamos un objeto de petición más estructurado
-        const request = {
-            contents: [{ parts: [{ text: prompt }] }],
-        };
-
-        // Enviamos el objeto de petición en lugar del texto simple
-        const resultIA = await modeloIA.generateContent(request);
-        const responseIA = await resultIA.response;
-
-        const MAX_REINTENTOS = 3;
+        // 4. Parsear y adaptar la respuesta
         let planCompleto;
+        try {
+            const textoJSON = responseIA.choices[0].message.content;
+            
+            console.log("===== RESPUESTA CRUDA DE OPENAI =====");
+            console.log(textoJSON);
+            console.log("=====================================");
 
-        for (let i = 0; i < MAX_REINTENTOS; i++) {
-            try {
-                console.log(`Intento de llamada a la IA #${i + 1}`);
+            console.log("[4] Parseando la respuesta JSON...");
+            const planRecibido = JSON.parse(textoJSON);
 
-                const modeloIA = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                const prompt = `... tu prompt ...`;
+            // ¡ADAPTADOR! Mapeamos la respuesta de la IA a la estructura que el frontend espera.
+   planCompleto = {
+                rutina: planRecibido.rutina_semanal,
+                dieta: planRecibido.dieta_semanal,
+            };
 
-                const resultIA = await modeloIA.generateContent(prompt);
-                const responseIA = await resultIA.response;
-
-                const textoLimpio = responseIA.text().replace(/```json/g, '').replace(/```/g, '').trim();
-                // ¡AGREGA ESTA LÍNEA PARA VER LA RESPUESTA!
-                console.log("===== TEXTO RECIBIDO DE LA IA =====");
-                console.log(textoLimpio);
-                console.log("===================================");
-                planCompleto = JSON.parse(textoLimpio);
-
-                // Si llegamos aquí, todo salió bien, rompemos el bucle.
-                break;
-
-            } catch (error) {
-                // Verificamos si es un error de sobrecarga (503)
-                if (error.status === 503 && i < MAX_REINTENTOS - 1) {
-                    console.warn(`Modelo sobrecargado. Reintentando en ${Math.pow(2, i)} segundos...`);
-                    // Esperamos un tiempo antes del siguiente reintento (1s, 2s, 4s...)
-                    await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000));
-                } else {
-                    // Si es otro error o el último reintento, lanzamos la excepción para que el catch principal la maneje
-                    throw error;
-                }
-            }
+        } catch (parseError) {
+            console.error("Error al parsear la respuesta de OpenAI:", parseError, "Texto recibido:", responseIA.choices[0]?.message?.content);
+            return res.status(500).json({ error: "La respuesta de la IA no tuvo un formato JSON válido." });
         }
-
-        if (!planCompleto) {
-            return res.status(503).json({ error: "El modelo de IA está actualmente sobrecargado. Por favor, inténtalo más tarde." });
-        }
-
-        // ENVIAR EL PLAN COMPLETO AL FRONTEND
+        
+        // 5. Enviar el plan formateado al frontend
+        console.log("[5] ¡Plan completo generado y formateado exitosamente!");
         res.json({
             ...planCompleto,
-            mensaje: "Plan de rutina y dieta generado exitosamente por IA."
+            mensaje: "Plan de rutina y dieta generado exitosamente con OpenAI (GPT)."
         });
 
     } catch (err) {
         console.error('Error en /generarPlanIA:', err);
-        res.status(500).json({ error: 'Error interno del servidor', details: err.message });
+        if (err instanceof OpenAI.APIError) {
+            if (err.code === 'ETIMEDOUT' || err.code === 'ESOCKETTIMEDOUT') {
+                return res.status(504).json({ error: 'La solicitud a OpenAI tardó demasiado en responder (Timeout).', details: 'Esto puede ser un problema de red o un firewall.' });
+            }
+            return res.status(err.status || 500).json({ error: 'Error de la API de OpenAI', details: err.message });
+        } else {
+            return res.status(500).json({ error: 'Error interno del servidor', details: err.message });
+        }
     }
 };
 
-// No olvides exportar la función si estás en un archivo de controlador
-module.exports = {
-    // ...tus otras funciones
-    generarPlanIA
-};
 //Endpont para generar plan de rutina y dieta, obtiene datos fisicos
 //Y los manda al script de phyton
 //Obtiene el resultado y combina los pdfs para descargar
